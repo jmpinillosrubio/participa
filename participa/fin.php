@@ -19,23 +19,44 @@ fclose($dni_votos);
 
 if ($control_voto==false){ //Si el voto no se encuentra registrado, inicia el proceso de grabación del voto. 
 
-$fp = fopen("votos.txt", "a"); //Almacena el voto
+$fp = fopen("votos.txt", "a"); //Almacena el voto, si el fichero está bloqueado continua intentandolo cada segundo.
     if (flock($fp, LOCK_EX | LOCK_NB)) {
 		fwrite($fp, $voto);
         //sleep(10);
         flock($fp, LOCK_UN);
     } 
 	else {
-        print "Fichero bloqueado";
+        $fc=true;
+		while ($fc==true){	
+			sleep(1);
+			$fp = fopen("votos.txt", "a"); 
+			if (flock($fp, LOCK_EX | LOCK_NB)) {
+				fwrite($fp, $voto);
+        		flock($fp, LOCK_UN);
+				$fc=false;
+			}
+			fclose($fc);
+		}
     }
-$fp = fopen("dni_votos.txt", "a"); //Almacena el Hash MD5 de la persona que vota
+$fp = fopen("dni_votos.txt", "a"); //Almacena el Hash MD5 de la persona que vota, fecha y hora local de votación
     if (flock($fp, LOCK_EX | LOCK_NB)) {
-		fwrite($fp, md5($dni)."\r\n");
-        //sleep(10);
+		date_default_timezone_set('Europe/Madrid');
+		fwrite($fp, md5($dni)." ".date("d-m-Y (H:i:s)")."\r\n");
         flock($fp, LOCK_UN);
     } 
 	else {
-        print "Fichero bloqueado";
+        $fc=true;
+		while ($fc==true){	
+			sleep(1);
+			$fp = fopen("dni_votos.txt", "a"); 
+			if (flock($fp, LOCK_EX | LOCK_NB)) {
+				date_default_timezone_set('Europe/Madrid');
+				fwrite($fp, md5($dni)." ".date("d-m-Y (H:i:s)")."\r\n");
+        		flock($fp, LOCK_UN);
+				$fc=false;
+			}
+			fclose($fc);
+		}
     }
 
 //Las siguientes sentencias reordenan los Hash en el fichero para evitar que se almacenen en el mismo orden que los votos, de esta forma se garantiza la imposibilidad de asociar el Hash del DNI con ninguno de los votos. 	
