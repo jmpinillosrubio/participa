@@ -43,6 +43,7 @@ $fp = fopen("dni_votos.txt", "a"); //Almacena el Hash MD5 de la persona que vota
 		date_default_timezone_set('Europe/Madrid');
 		fwrite($fp, md5($dni)." ".date("d-m-Y (H:i:s)")."\r\n");
         flock($fp, LOCK_UN);
+		fclose($fp);
     } 
 	else {
         $fc=true;
@@ -61,8 +62,8 @@ $fp = fopen("dni_votos.txt", "a"); //Almacena el Hash MD5 de la persona que vota
 
 //Las siguientes sentencias reordenan los Hash en el fichero para evitar que se almacenen en el mismo orden que los votos, de esta forma se garantiza la imposibilidad de asociar el Hash del DNI con ninguno de los votos. 	
 $i=0;
-$dni_votos = fopen("dni_votos.txt", "r") or exit("Error abriendo fichero listado dni votos!");       
-while ($linea = fgets($dni_votos)) {
+$votos = fopen("votos.txt", "r") or exit("Error abriendo fichero listado dni votos!");       
+while ($linea = fgets($votos)) {
 	$array_lineas[$i]=$linea; //Almacena la lista de Hash del fichero dni_votos.txt en un array
 	$i++;
 	
@@ -70,16 +71,39 @@ while ($linea = fgets($dni_votos)) {
 
 shuffle($array_lineas); //Mezcla el array de Hash
         
-$dni_votos = fopen("dni_votos.txt", "w") or exit("Error abriendo fichero listado dni votos!");
+$votos = fopen("votos.txt", "w") or exit("Error abriendo fichero listado dni votos!");
 
 if (flock($dni_votos, LOCK_EX | LOCK_NB)) {
 	while ($i>=0) {
 		
-		fwrite($dni_votos, $array_lineas[$i]); //Guarda el array de Hash de nuevo en el fichero con un orden aleatorio
+		if(substr($array_lineas[$i], 0, 1)<>"/"){
+			fwrite($fp, $array_lineas[$i]); //Guarda el voto
+		} //Guarda el voto de nuevo en el fichero con un orden aleatorio
 		$i--;
 	}
-	flock($dni_votos, LOCK_UN);
+	flock($votos, LOCK_UN);
+	fclose($votos);
 }
+	else {
+        $fc=true;
+		while ($fc==true){	
+			sleep(1);
+			$fp = fopen("votos.txt", "w") or exit("Error abriendo fichero listado dni votos!");
+			if (flock($fp, LOCK_EX | LOCK_NB)) {
+				while ($i>=0) {
+					if(substr($array_lineas[$i], 0, 1)<>"/"){
+						fwrite($fp, $array_lineas[$i]); //Guarda el voto
+					}
+					$i--;
+				}
+        		flock($fp, LOCK_UN);
+				$fc=false;
+			}
+			fclose($fc);
+		}
+    }
+
+
 
 // Las siguientes líneas muestran la página web con la confirmación del voto y el Hash asignado al voto para futuras verificaciones
 echo '<html>
@@ -144,7 +168,7 @@ else {
         
     
      <div class="imgBx">
-        <img src="https://images.unsplash.com/photo-1481824429379-07aa5e5b0739?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=500&q=60">
+        <img src="https://participa.fespugtclm.es/participa.png?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=500&q=60">
     </div>
     </div>
     
